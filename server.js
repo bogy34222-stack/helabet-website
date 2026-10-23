@@ -7,7 +7,7 @@ const multer = require('multer');
 const crypto = require('crypto');
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;;
 const DATA = path.join(__dirname, 'data');
 const UPLOADS = path.join(__dirname, 'uploads');
 
@@ -279,6 +279,6 @@ app.use((err, req, res, next) => {
   res.status(400).json({ error: 'تعذر إتمام الطلب. راجع البيانات وحاول مرة أخرى.' });
 });
 
-app.listen(PORT, '127.0.0.1', () => {
+app.listen(PORT, '0.0.0.0', () => {', () => {
   console.log(`HelaBet local server: http://127.0.0.1:${PORT}`);
 });
