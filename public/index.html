@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HELABET | BANK TRANSFER</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#101820;color:#fff;font-family:Arial,sans-serif}
+header{text-align:center;padding:22px;background:#192b36;border-bottom:3px solid #c9a653}
+h1,h2{color:#d9b65b}
+main{max-width:480px;margin:22px auto;padding:14px}
+.card{background:#1c2b36;padding:20px;border-radius:15px;margin-bottom:16px}
+input,button{width:100%;padding:13px;margin:8px 0;border-radius:8px;font-size:15px}
+input{background:#101820;color:white;border:1px solid #53616b}
+button{background:#d9b65b;color:#101820;border:0;font-weight:bold}
+.muted{color:#bdc9d0;font-size:13px;line-height:1.8}
+.payments{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.pay{background:white;color:#222;border-radius:10px;padding:12px;min-width:125px;text-align:center;font-weight:bold}
+.vod{color:#e60000}.insta{color:#6b39b9}
+.address{direction:ltr;overflow-wrap:anywhere;background:#101820;padding:12px;border-radius:8px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<header>
+<h1>HELABET</h1>
+<div>BANK TRANSFER</div>
+<div class="payments">
+<div class="pay"><span class="vod">● Vodafone Cash</span></div>
+<div class="pay"><span class="insta">◆ InstaPay</span></div>
+</div>
+</header>
+<main>
+<section class="card" id="login">
+<h2>تسجيل الدخول</h2>
+<input id="username" autocomplete="username" placeholder="Username">
+<input id="password" type="password" autocomplete="current-password" placeholder="Password">
+<button onclick="login()">دخول</button>
+<p id="loginMsg" class="muted"></p>
+</section>
+
+<section class="card" id="setup" hidden>
+<h2>إنشاء حساب الإدارة لأول مرة</h2>
+<p class="muted">أنشئ مفتاح التهيئة من إعدادات الخادم قبل استخدام هذه الخطوة.</p>
+<input id="setupKey" type="password" placeholder="مفتاح التهيئة">
+<input id="adminUser" placeholder="اسم مستخدم الإدارة">
+<input id="adminPass" type="password" placeholder="كلمة مرور قوية (12 حرفاً على الأقل)">
+<button onclick="setupAdmin()">إنشاء حساب الإدارة</button>
+<p id="setupMsg"></p>
+</section>
+
+<section id="dashboard" hidden>
+<div class="card">
+<h2>إيداع لتفعيل البنك النقدي ومنصة الدفع الإلكتروني</h2>
+<p>رقم الوكالة (Username)</p>
+<div class="address" id="agentName"></div>
+<h2>عنوان إيداع Binance</h2>
+<div class="address" id="walletAddress">TE76xXYHXB7p7Vs9UjZf8DgKjSVynDqZzm</div>
+<p>الشبكة: <b>TRC20 (TRON)</b></p>
+<button onclick="copyAddress()">نسخ عنوان الإيداع</button>
+<p>الحد الأدنى للإيداع: <b>1000 دولار أمريكي</b></p>
+<input id="amount" type="number" min="1000" placeholder="المبلغ بالدولار">
+<input id="txid" placeholder="رقم معاملة التحويل (TXID)">
+<p class="muted">لا ترفع صورة بطاقة أو مستندات شخصية. لا تُرسل الأموال إلا بعد التأكد من ملكية العنوان وشروط الإيداع.</p>
+<button onclick="deposit()">تأكيد طلب الإيداع</button>
+<p id="depositMsg"></p>
+</div>
+
+<div class="card" id="adminPanel" hidden>
+<h2>إدارة الوكلاء</h2>
+<input id="newUser" placeholder="اسم مستخدم الوكيل">
+<input id="newPass" type="password" placeholder="كلمة مرور الوكيل (12 حرفاً على الأقل)">
+<button onclick="createAgent()">إنشاء حساب وكيل</button>
+<button onclick="loadAgents()">عرض حسابات الوكلاء</button>
+<div id="agents"></div>
+<h2>طلبات الإيداع</h2>
+<button onclick="loadDeposits()">عرض الطلبات</button>
+<div id="deposits"></div>
+</div>
+<button onclick="logout()">تسجيل الخروج</button>
+</section>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+let currentUser=null;
+async function api(url,body){
+ const r=await fetch(url,{method:body?'POST':'GET',headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});
+ const data=await r.json();
+ if(!r.ok)throw Error(data.error||'حدث خطأ');
+ return data;
+}
+async function login(){
+ try{
+  const d=await api('/api/login',{username:$('username').value.trim(),password:$('password').value});
+  currentUser=d.user;
+  $('login').hidden=true;$('setup').hidden=true;$('dashboard').hidden=false;
+  $('agentName').textContent=currentUser.username;
+  $('adminPanel').hidden=currentUser.role!=='admin';
+ }catch(e){$('loginMsg').textContent=e.message;}
+}
+async function setupAdmin(){
+ try{
+  await api('/api/admin/setup',{username:$('adminUser').value.trim(),password:$('adminPass').value,setupKey:$('setupKey').value});
+  $('setupMsg').textContent='تم إنشاء الإدارة. سجّل الدخول الآن.';
+ }catch(e){$('setupMsg').textContent=e.message;}
+}
+async function createAgent(){
+ try{
+  const d=await api('/api/admin/agents',{username:$('newUser').value.trim(),password:$('newPass').value});
+  alert(d.message);loadAgents();
+ }catch(e){alert(e.message);}
+}
+async function loadAgents(){
+ try{
+  const a=await api('/api/admin/agents');
+  $('agents').innerHTML=a.map(x=>`<p>${x.username} — ${x.active?'مفعل':'متوقف'} <button onclick="toggleAgent(${x.id})">تغيير الحالة</button></p>`).join('');
+ }catch(e){alert(e.message);}
+}
+async function toggleAgent(id){try{await api('/api/admin/agents/'+id+'/toggle',{});loadAgents();}catch(e){alert(e.message);}}
+async function loadDeposits(){
+ try{
+  const a=await api('/api/admin/deposits');
+  $('deposits').innerHTML=a.map(x=>`<div class="card"><p>الوكيل: ${x.username}</p><p>المبلغ: $${x.amount}</p><p>TXID: ${x.txid}</p><p>الحالة: ${x.status}</p><button onclick="depositStatus(${x.id},'approved')">قبول</button><button onclick="depositStatus(${x.id},'rejected')">رفض</button></div>`).join('')||'لا توجد طلبات';
+ }catch(e){alert(e.message);}
+}
+async function depositStatus(id,status){try{await api('/api/admin/deposits/'+id+'/status',{status});loadDeposits();}catch(e){alert(e.message);}}
+async function deposit(){
+ try{
+  const d=await api('/api/deposits',{amount:Number($('amount').value),txid:$('txid').value.trim()});
+  $('depositMsg').textContent=d.message;
+ }catch(e){$('depositMsg').textContent=e.message;}
+}
+async function copyAddress(){
+ try{await navigator.clipboard.writeText($('walletAddress').textContent);alert('تم نسخ العنوان');}
+ catch(e){alert('اضغط مطولاً على العنوان لنسخه');}
+}
+async function logout(){await api('/api/logout',{});location.reload();}
+(async()=>{
+ try{
+  const d=await api('/api/status');
+  if(d.loggedIn){currentUser=d.user;$('login').hidden=true;$('dashboard').hidden=false;$('agentName').textContent=currentUser.username;$('adminPanel').hidden=currentUser.role!=='admin';}
+ }catch(e){}
+})();
+</script>
+</body>
+</html>
+$
